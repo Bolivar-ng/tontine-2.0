@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tirage au Sort — Tontine 2.0</title>
+<style>
+  :root {
+    --primary: #4F46E5;
+    --primary-light: #EEF2FF;
+    --text: #1E293B;
+    --text-muted: #64748B;
+    --bg: #F8FAFC;
+    --card-bg: #FFFFFF;
+    --border: #E2E8F0;
+    --success: #10B981;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+
+  /* HEADER */
+  .app-header {
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    color: white; text-align: center; padding: 32px 20px 24px;
+  }
+  .app-header .logo { font-size: 2.4rem; margin-bottom: 6px; }
+  .app-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
+  .app-header p { font-size: 0.9rem; opacity: 0.8; margin-top: 4px; }
+  .progress-bar { background: rgba(255,255,255,0.2); height: 4px; margin-top: 20px; border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: white; border-radius: 2px; transition: width 0.6s ease; }
+
+  /* MAIN */
+  .main { max-width: 600px; margin: 0 auto; padding: 24px 16px 60px; }
+  .phase-enter { animation: phaseIn 0.4s ease forwards; }
+  @keyframes phaseIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* CARD */
+  .card {
+    background: var(--card-bg); border-radius: var(--radius);
+    box-shadow: 0 4px 24px rgba(79,70,229,0.08);
+    padding: 28px 24px; margin-bottom: 20px; border: 1px solid var(--border);
+  }
+  .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+  .card-sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; }
+  .group-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--primary-light); color: var(--primary);
+    font-weight: 700; font-size: 0.8rem;
+    padding: 5px 14px; border-radius: 999px; margin-bottom: 16px;
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+
+  /* PARTICIPANT ROW */
+  .participant-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .participant-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--primary-light); color: var(--primary);
+    font-weight: 700; font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .color-swatch {
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid rgba(0,0,0,0.15); box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  }
+  input.name-input {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; font-size: 0.95rem; color: var(--text);
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s; background: var(--bg);
+  }
+  input.name-input:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); background: white;
+  }
+  input.name-input:disabled { background: #F1F5F9; color: var(--text-muted); cursor: not-allowed; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 14px 28px; border-radius: 12px;
+    font-size: 1rem; font-weight: 700; cursor: pointer; border: none;
+    transition: all 0.2s; text-align: center; width: 100%;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #4F46E5, #7C3AED); color: white;
+    box-shadow: 0 4px 16px rgba(79,70,229,0.3);
+  }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,70,229,0.35); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-accent {
+    background: linear-gradient(135deg, #F59E0B, #D97706); color: white;
+    box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+  }
+  .btn-accent:hover { transform: translateY(-2px); }
+  .btn-ghost { background: #F1F5F9; color: var(--text-muted); font-size: 0.85rem; padding: 10px 18px; width: auto; }
+  .btn-ghost:hover { background: #E2E8F0; color: var(--text); }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .btn-row .btn { flex: 1; min-width: 130px; }
+
+  /* STEPS */
+  .steps-row { display: flex; gap: 8px; align-items: center; margin-bottom: 24px; }
+  .step-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+  .step-item.active { color: var(--primary); }
+  .step-item.done { color: var(--success); }
+  .step-dot {
+    width: 22px; height: 22px; border-radius: 50%; background: #E2E8F0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0;
+  }
+  .step-item.active .step-dot { background: var(--primary); color: white; }
+  .step-item.done .step-dot { background: var(--success); color: white; }
+  .step-sep { flex: 1; height: 2px; background: var(--border); border-radius: 2px; }
+
+  /* SLOT MACHINE */
+  .slot-stage { text-align: center; padding: 24px 16px; }
+  .slot-position-label { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+  .slot-position-num { font-size: 3.5rem; font-weight: 900; color: var(--primary); line-height: 1; margin-bottom: 20px; }
+  .slot-window {
+    background: linear-gradient(135deg, #1E1B4B, #312E81); border-radius: 20px;
+    padding: 28px 24px; min-height: 110px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; position: relative;
+    box-shadow: inset 0 4px 24px rgba(0,0,0,0.3), 0 8px 32px rgba(79,70,229,0.2);
+  }
+  .slot-name { font-size: 1.9rem; font-weight: 900; color: white; text-align: center; }
+  .countdown-ring {
+    display: flex; align-items: center; justify-content: center;
+    width: 80px; height: 80px; border-radius: 50%;
+    background: var(--primary-light); border: 4px solid var(--primary);
+    font-size: 2.4rem; font-weight: 900; color: var(--primary);
+    animation: countPulse 1s ease-in-out infinite;
+  }
+  @keyframes countPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+  .reveal-name {
+    font-size: 2.4rem; font-weight: 900; color: white; text-align: center;
+    animation: revealPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  @keyframes revealPop {
+    0%{opacity:0;transform:scale(0.5);}
+    100%{opacity:1;transform:scale(1);}
+  }
+
+  /* REVEALED LIST */
+  .revealed-list { margin: 0; }
+  .revealed-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 11px 14px; border-radius: 10px; margin-bottom: 6px;
+    background: var(--primary-light);
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+  .revealed-pos { font-weight: 900; color: var(--primary); font-size: 1rem; min-width: 36px; }
+  .revealed-name { font-weight: 600; font-size: 1rem; }
+
+  /* RESULTS TABLE */
+  .results-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  .results-table th { text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); padding: 10px 14px; border-bottom: 2px solid var(--border); }
+  .results-table td { padding: 13px 14px; border-bottom: 1px solid var(--border); font-size: 1rem; font-weight: 500; }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table tr:hover td { background: var(--primary-light); transition: background 0.15s; }
+  .pos-cell { font-weight: 900; color: var(--primary); font-size: 1.1rem; width: 60px; }
+
+  /* CONGRATS */
+  .congrats-box {
+    text-align: center; padding: 24px 20px;
+    background: linear-gradient(135deg, #EEF2FF, #FEF3C7);
+    border-radius: var(--radius); margin-bottom: 20px;
+  }
+  .congrats-emoji { font-size: 3rem; margin-bottom: 8px; }
+  .congrats-title { font-size: 1.4rem; font-weight: 800; }
+  .congrats-sub { font-size: 0.9rem; color: var(--text-muted); margin-top: 4px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1E293B; color: white; padding: 12px 24px;
+    border-radius: 999px; font-size: 0.9rem; font-weight: 600;
+    z-index: 10000; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1); pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* CONFETTI */
+  #confetti-canvas { position: fixed; top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999; }
+
+  .reset-link { display:block;text-align:center;margin-top:32px;color:var(--text-muted);font-size:0.82rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px; }
+  .reset-link:hover { color:#EF4444; }
+
+  @media(max-width:480px){
+    .card{padding:20px 16px;}
+    .reveal-name{font-size:1.9rem;}
+    .slot-position-num{font-size:2.8rem;}
+    .btn-row{flex-direction:column;}
+    .btn-row .btn{width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+<div class="toast" id="toast"></div>
+
+<div class="app-header">
+  <div class="logo">🎲</div>
+  <h1>Tontine 2.0</h1>
+  <p>Tirage au sort transparent et équitable</p>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:5%"></div>
+  </div>
+</div>
+
+<div class="main" id="app"></div>
+
+<script>
+// ═══════════════════════════════
+// COULEURS
+// ═══════════════════════════════
+var G1_COLORS = [
+  {hex:'#3B82F6'}, // 0 Bleu
+  {hex:'#EF4444'}, // 1 Rouge
+  {hex:'#F97316'}, // 2 Orange
+  {hex:'#CBD5E1'}, // 3 Blanc
+  {hex:'#D4A574'}, // 4 Beige
+  {hex:'#92400E'}, // 5 Marron
+  {hex:'#22C55E'}, // 6 Vert
+];
+var G2_COLORS = [
+  {hex:'#EF4444'}, // 0 Rouge (fixe pos 1)
+  {hex:'#3B82F6'}, // 1 Bleu
+  {hex:'#8B5CF6'}, // 2 Violet
+  {hex:'#F97316'}, // 3 Orange
+];
+
+// ═══════════════════════════════
+// CRYPTO
+// ═══════════════════════════════
+function cryptoRandInt(max) {
+  var a = new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return a[0] % max;
+}
+function fisherYates(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = cryptoRandInt(i + 1);
+    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+  }
+  return a;
+}
+
+// ═══════════════════════════════
+// ORDRE D'AFFICHAGE (aléatoire à chaque ouverture)
+// ═══════════════════════════════
+var G1_DISPLAY = fisherYates([0,1,2,3,4,5,6]);
+var G2_DISPLAY = fisherYates([0,1,2,3]);
+
+// ═══════════════════════════════
+// TIRAGE
+// ═══════════════════════════════
+function drawGroup1(namesByIdx) {
+  var front = fisherYates([0,1,2,3,4]);
+  var back  = fisherYates([5,6]);
+  var order = front.concat(back);
+  return order.map(function(idx, i) {
+    return {pos: i+1, name: namesByIdx[idx]};
+  });
+}
+function drawGroup2(namesByIdx) {
+  var free  = fisherYates([1,2,3]);
+  var order = [0].concat(free);
+  return order.map(function(idx, i) {
+    return {pos: i+1, name: namesByIdx[idx]};
+  });
+}
+
+// ═══════════════════════════════
+// STATE
+// ═══════════════════════════════
+var state = {
+  phase: 'g1-config',
+  g1Names: ['','','','','','',''],
+  g2Names: ['','',''],
+  g1Result: null,
+  g2Result: null,
+  g1RevealedCount: 0,
+  g2RevealedCount: 0,
+  animRunning: false,
+};
+
+var app = document.getElementById('app');
+var progressFill = document.getElementById('progressFill');
+
+// ═══════════════════════════════
+// CONFETTI
+// ═══════════════════════════════
+function launchConfetti() {
+  try {
+    var canvas = document.getElementById('confetti-canvas');
+    var ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    var particles = [];
+    var cols = ['#4F46E5','#7C3AED','#F59E0B','#10B981','#EF4444','#3B82F6','#EC4899'];
+    for (var i = 0; i < 130; i++) {
+      particles.push({
+        x: Math.random()*canvas.width, y:-20,
+        w: 8+Math.random()*8, h:4+Math.random()*6,
+        color: cols[Math.floor(Math.random()*cols.length)],
+        vx:(Math.random()-.5)*4, vy:2+Math.random()*4,
+        rot:Math.random()*Math.PI*2, rv:(Math.random()-.5)*0.2,
+        alpha:1
+      });
+    }
+    var start = null;
+    function draw(ts) {
+      if (!start) start = ts;
+      var elapsed = ts - start;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      var alive = false;
+      for (var i = 0; i < particles.length; i++) {
+        var p = particles[i];
+        p.x+=p.vx; p.y+=p.vy; p.rot+=p.rv; p.vy+=0.07;
+        if (elapsed > 2500) p.alpha -= 0.015;
+        if (p.alpha > 0) alive = true;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+        ctx.restore();
+      }
+      if (elapsed < 4500 && alive) requestAnimationFrame(draw);
+      else ctx.clearRect(0,0,canvas.width,canvas.height);
+    }
+    requestAnimationFrame(draw);
+  } catch(e) {}
+}
+
+// ═══════════════════════════════
+// TOAST
+// ═══════════════════════════════
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2800);
+}
+
+// ═══════════════════════════════
+// PROGRESS
+// ═══════════════════════════════
+function updateProgress() {
+  var map = {'g1-config':5,'g1-reveal':40,'g1-done':55,'g2-config':65,'g2-reveal':85,'g2-done':100};
+  progressFill.style.width = (map[state.phase]||5)+'%';
+}
+
+// ═══════════════════════════════
+// STEPS
+// ═══════════════════════════════
+function stepsHTML() {
+  var steps = [{id:1,label:'Groupe 1'},{id:2,label:'Tirage G1'},{id:3,label:'Groupe 2'},{id:4,label:'Tirage G2'}];
+  var cur = {'g1-config':1,'g1-reveal':2,'g1-done':2,'g2-config':3,'g2-reveal':4,'g2-done':4}[state.phase] || 1;
+  var h = '<div class="steps-row">';
+  for (var i = 0; i < steps.length; i++) {
+    var s = steps[i];
+    var cls = cur > s.id ? 'done' : cur === s.id ? 'active' : '';
+    var icon = cur > s.id ? '✓' : s.id;
+    h += '<div class="step-item '+cls+'"><div class="step-dot">'+icon+'</div><span>'+s.label+'</span></div>';
+    if (i < steps.length-1) h += '<div class="step-sep"></div>';
+  }
+  return h + '</div>';
+}
+
+// ═══════════════════════════════
+// RENDER ROUTER
+// ═══════════════════════════════
+function render() {
+  updateProgress();
+  app.className = 'main phase-enter';
+  void app.offsetWidth;
+  if      (state.phase === 'g1-config') renderConfig(1);
+  else if (state.phase === 'g1-reveal') renderReveal(1);
+  else if (state.phase === 'g1-done')   renderDone(1);
+  else if (state.phase === 'g2-config') renderConfig(2);
+  else if (state.phase === 'g2-reveal') renderReveal(2);
+  else if (state.phase === 'g2-done')   renderDone(2);
+}
+
+// ═══════════════════════════════
+// CONFIG
+// ═══════════════════════════════
+function renderConfig(group) {
+  var displayOrder = group === 1 ? G1_DISPLAY : G2_DISPLAY;
+  var colors = group === 1 ? G1_COLORS : G2_COLORS;
+  var count = displayOrder.length;
+
+  var rows = '';
+  for (var dp = 0; dp < count; dp++) {
+    var colorIdx = displayOrder[dp];
+    var c = colors[colorIdx];
+    rows += '<div class="participant-row">'
+      + '<div class="participant-num">'+(dp+1)+'</div>'
+      + '<div class="color-swatch" style="background:'+c.hex+'"></div>'
+      + '<input class="name-input" type="text" placeholder="Prénom…"'
+      + ' oninput="setName('+group+','+dp+',this.value)"'
+      + ' maxlength="30"'
+      + (group===1 ? ' value="'+(state.g1Names[dp]||'')+'"' : ' value="'+(state.g2Names[dp]||'')+'"')
+      + '/>'
+      + '</div>';
+  }
+
+  var doneCard = group === 2
+    ? '<div class="card" style="background:linear-gradient(135deg,#FFFBEB,#FEF3C7);border-color:#FDE68A"><div style="font-size:1.5rem;margin-bottom:6px">✅</div><div class="card-title">Groupe 1 complété</div><div class="card-sub">Passez maintenant à la configuration du Groupe 2.</div></div>'
+    : '';
+
+  var badge = group === 2
+    ? 'style="background:#F5F3FF;color:#6D28D9"'
+    : '';
+
+  app.innerHTML = stepsHTML()
+    + doneCard
+    + '<div class="card">'
+    + '<div class="group-badge" '+badge+'>🎯 Groupe '+group+' — '+count+' participants</div>'
+    + '<div class="card-title">Saisir les prénoms des participants</div>'
+    + '<div class="card-sub">Les couleurs sont prédéfinies. Saisissez uniquement les prénoms.</div>'
+    + rows
+    + '<button class="btn btn-primary" style="margin-top:20px" onclick="startDraw('+group+')">🎲 Lancer le tirage</button>'
+    + '</div>'
+    + '<span class="reset-link" onclick="confirmReset()">↺ Recommencer depuis le début</span>';
+}
+
+function setName(group, dp, val) {
+  if (group === 1) state.g1Names[dp] = val;
+  else             state.g2Names[dp] = val;
+}
+
+// ═══════════════════════════════
+// START DRAW
+// ═══════════════════════════════
+function startDraw(group) {
+  var displayOrder = group === 1 ? G1_DISPLAY : G2_DISPLAY;
+  var rawNames     = group === 1 ? state.g1Names : state.g2Names;
+  var count        = displayOrder.length;
+
+  // Reconstruire namesByColorIdx
+  var namesByIdx = [];
+  for (var i = 0; i < count; i++) namesByIdx.push('');
+  for (var dp = 0; dp < count; dp++) {
+    namesByIdx[displayOrder[dp]] = (rawNames[dp] || '').trim();
+  }
+
+  if (namesByIdx.some(function(n){ return !n; })) {
+    showToast('⚠️ Veuillez saisir les '+count+' prénoms.'); return;
+  }
+  var uniq = {};
+  for (var i = 0; i < namesByIdx.length; i++) {
+    if (uniq[namesByIdx[i]]) { showToast('⚠️ Deux participants ont le même prénom.'); return; }
+    uniq[namesByIdx[i]] = true;
+  }
+
+  if (group === 1) {
+    state.g1Result = drawGroup1(namesByIdx);
+    state.g1RevealedCount = 0;
+    state.phase = 'g1-reveal';
+  } else {
+    state.g2Result = drawGroup2(namesByIdx);
+    state.g2RevealedCount = 0;
+    state.phase = 'g2-reveal';
+  }
+  render();
+}
+
+// ═══════════════════════════════
+// REVEAL PAGE — rendue UNE SEULE FOIS, mise à jour en place
+// ═══════════════════════════════
+function renderReveal(group) {
+  var result   = group === 1 ? state.g1Result : state.g2Result;
+  var revealed = group === 1 ? state.g1RevealedCount : state.g2RevealedCount;
+  var total    = result.length;
+
+  // Liste déjà révélés
+  var revListHTML = '';
+  for (var i = 0; i < revealed; i++) {
+    revListHTML += '<div class="revealed-item"><div class="revealed-pos">N°'+result[i].pos+'</div><div class="revealed-name">✅ '+result[i].name+'</div></div>';
+  }
+
+  var nextPos = revealed + 1;
+
+  app.innerHTML = stepsHTML()
+    + '<div class="card" id="revealedCard" style="padding:16px 20px;'+(revealed===0?'display:none':'')+'">'
+    + '<div class="card-title" id="revealedTitle" style="font-size:0.9rem;margin-bottom:10px">📋 Révélés ('+revealed+'/'+total+')</div>'
+    + '<div class="revealed-list" id="revealedList">'+revListHTML+'</div>'
+    + '</div>'
+    + '<div class="card">'
+    + '<div class="slot-stage">'
+    + '<div class="slot-position-label">Position</div>'
+    + '<div class="slot-position-num" id="posNum">'+nextPos+'</div>'
+    + '<div class="slot-window" id="slotWindow"><div class="slot-name" id="slotName">?</div></div>'
+    + '<div id="actionArea" style="margin-top:20px">'
+    + '<button class="btn btn-primary" id="revealBtn" onclick="doReveal('+group+')">🎰 Révéler la position '+nextPos+'</button>'
+    + '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+// Mise à jour SANS re-render
+function doReveal(group) {
+  if (state.animRunning) return;
+  state.animRunning = true;
+
+  var result   = group === 1 ? state.g1Result : state.g2Result;
+  var revealed = group === 1 ? state.g1RevealedCount : state.g2RevealedCount;
+  var current  = result[revealed];
+  var allNames = result.map(function(r){ return r.name; });
+  var total    = result.length;
+
+  var revealBtn  = document.getElementById('revealBtn');
+  var actionArea = document.getElementById('actionArea');
+  var slotWindow = document.getElementById('slotWindow');
+  var posNum     = document.getElementById('posNum');
+
+  if (revealBtn) revealBtn.disabled = true;
+  if (actionArea) actionArea.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;padding:10px">⏳ Tirage en cours…</div>';
+
+  // Phase 1 : slot spin 2.2s
+  var tick = 0;
+  var spinInterval = setInterval(function(){
+    var sw = document.getElementById('slotWindow');
+    if (!sw) { clearInterval(spinInterval); return; }
+    var n = document.getElementById('slotName') || sw.querySelector('.slot-name');
+    if (n) {
+      n.textContent = allNames[cryptoRandInt(allNames.length)];
+      n.style.opacity = tick % 2 === 0 ? '0.65' : '1';
+    }
+    tick++;
+  }, 85);
+
+  // Phase 2 : countdown après 2.2s
+  setTimeout(function(){
+    clearInterval(spinInterval);
+    var sw = document.getElementById('slotWindow');
+    if (!sw) { state.animRunning = false; return; }
+    var count = 3;
+    sw.innerHTML = '<div class="countdown-ring" id="cdRing">'+count+'</div>';
+
+    var cdInt = setInterval(function(){
+      count--;
+      var ring = document.getElementById('cdRing');
+      if (count > 0 && ring) {
+        ring.textContent = count;
+        // reset animation
+        ring.style.animation = 'none';
+        void ring.offsetWidth;
+        ring.style.animation = '';
+      } else {
+        clearInterval(cdInt);
+
+        // Phase 3 : reveal du nom
+        var sw2 = document.getElementById('slotWindow');
+        if (sw2) sw2.innerHTML = '<div class="reveal-name">'+current.name+'</div>';
+
+        // Mettre à jour le compteur
+        if (group === 1) state.g1RevealedCount++;
+        else             state.g2RevealedCount++;
+        var newRevealed = group === 1 ? state.g1RevealedCount : state.g2RevealedCount;
+
+        setTimeout(function(){
+          state.animRunning = false;
+
+          if (newRevealed >= total) {
+            // Fini !
+            launchConfetti();
+            setTimeout(function(){
+              state.phase = group === 1 ? 'g1-done' : 'g2-done';
+              render();
+            }, 1800);
+          } else {
+            // Mise à jour en place : position, liste, bouton
+            var pn = document.getElementById('posNum');
+            if (pn) pn.textContent = newRevealed + 1;
+
+            var sw3 = document.getElementById('slotWindow');
+            if (sw3) sw3.innerHTML = '<div class="slot-name" id="slotName">?</div>';
+
+            // Ajouter à la liste révélée
+            var list = document.getElementById('revealedList');
+            var card = document.getElementById('revealedCard');
+            var title = document.getElementById('revealedTitle');
+            if (list) {
+              var item = document.createElement('div');
+              item.className = 'revealed-item';
+              item.innerHTML = '<div class="revealed-pos">N°'+current.pos+'</div><div class="revealed-name">✅ '+current.name+'</div>';
+              list.appendChild(item);
+            }
+            if (card) card.style.display = '';
+            if (title) title.textContent = '📋 Révélés ('+newRevealed+'/'+total+')';
+
+            // Nouveau bouton
+            var aa = document.getElementById('actionArea');
+            if (aa) {
+              aa.innerHTML = '<button class="btn btn-primary" id="revealBtn" onclick="doReveal('+group+')">'
+                + '▶️ Position suivante ('+( newRevealed+1 )+'/'+total+')</button>';
+            }
+          }
+        }, 700);
+      }
+    }, 1000);
+  }, 2200);
+}
+
+// ═══════════════════════════════
+// DONE
+// ═══════════════════════════════
+function renderDone(group) {
+  var result = group === 1 ? state.g1Result : state.g2Result;
+  var isLast = group === 2;
+
+  var tableRows = '';
+  for (var i = 0; i < result.length; i++) {
+    tableRows += '<tr><td class="pos-cell">'+result[i].pos+'</td><td>'+result[i].name+'</td></tr>';
+  }
+
+  var nextBtn = group === 1
+    ? '<button class="btn btn-accent" onclick="goGroup2()" style="margin-top:16px">➡️ Passer au Groupe 2</button>'
+    : '<button class="btn btn-ghost" onclick="confirmReset()" style="margin-top:16px;width:100%">↺ Nouveau tirage complet</button>';
+
+  var g1Recall = '';
+  if (group === 2 && state.g1Result) {
+    var rows1 = '';
+    for (var i = 0; i < state.g1Result.length; i++) {
+      rows1 += '<tr><td class="pos-cell">'+state.g1Result[i].pos+'</td><td>'+state.g1Result[i].name+'</td></tr>';
+    }
+    g1Recall = '<div class="card" style="opacity:0.75"><div class="card-title" style="font-size:0.9rem">📋 Rappel — Résultats Groupe 1</div>'
+      + '<table class="results-table"><thead><tr><th>Position</th><th>Participant</th></tr></thead><tbody>'+rows1+'</tbody></table></div>';
+  }
+
+  app.innerHTML = stepsHTML()
+    + '<div class="congrats-box"><div class="congrats-emoji">🎉</div>'
+    + '<div class="congrats-title">Groupe '+group+' terminé !</div>'
+    + '<div class="congrats-sub">'+(isLast ? 'Les deux groupes ont été tirés au sort !' : 'Résultat complet du Groupe 1.')+'</div></div>'
+    + '<div class="card"><div class="card-title">Résultats — Groupe '+group+'</div>'
+    + '<table class="results-table"><thead><tr><th>Position</th><th>Participant</th></tr></thead><tbody>'+tableRows+'</tbody></table>'
+    + '<div class="btn-row">'
+    + '<button class="btn btn-ghost" onclick="copyResult('+group+')">📋 Copier</button>'
+    + '<button class="btn btn-ghost" onclick="exportPNG('+group+')">🖼️ Exporter PNG</button>'
+    + '</div>'
+    + nextBtn
+    + '</div>'
+    + g1Recall
+    + '<span class="reset-link" onclick="confirmReset()">↺ Recommencer depuis le début</span>';
+}
+
+function goGroup2() { state.phase = 'g2-config'; render(); }
+
+// ═══════════════════════════════
+// COPY / EXPORT
+// ═══════════════════════════════
+function copyResult(group) {
+  var result = group === 1 ? state.g1Result : state.g2Result;
+  var lines = ['Tirage Tontine 2.0 — Groupe '+group+'\n'];
+  for (var i = 0; i < result.length; i++) {
+    lines.push('Position '+result[i].pos+' : '+result[i].name);
+  }
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(function(){ showToast('✅ Résultat copié !'); })
+    .catch(function(){ showToast('❌ Impossible de copier.'); });
+}
+
+function exportPNG(group) {
+  try {
+    var result = group === 1 ? state.g1Result : state.g2Result;
+    var canvas = document.createElement('canvas');
+    var scale = 2;
+    var W = 480, H = 100 + result.length * 44 + 50;
+    canvas.width = W*scale; canvas.height = H*scale;
+    var ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // fond
+    ctx.fillStyle = '#F8FAFC'; ctx.fillRect(0,0,W,H);
+
+    // header
+    var grad = ctx.createLinearGradient(0,0,W,80);
+    grad.addColorStop(0,'#4F46E5'); grad.addColorStop(1,'#7C3AED');
+    ctx.fillStyle = grad; ctx.fillRect(16,16,W-32,70);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 20px system-ui,-apple-system,sans-serif';
+    ctx.fillText('Tontine 2.0 — Groupe '+group, 32, 48);
+    ctx.font = '13px system-ui,-apple-system,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText('Tirage au sort', 32, 70);
+
+    // lignes
+    for (var i = 0; i < result.length; i++) {
+      var y = 102 + i*44;
+      ctx.fillStyle = i%2===0 ? '#EEF2FF' : '#FFFFFF';
+      ctx.fillRect(16, y, W-32, 38);
+      ctx.fillStyle = '#4F46E5'; ctx.font = 'bold 15px system-ui,-apple-system,sans-serif';
+      ctx.fillText('N°'+result[i].pos, 30, y+24);
+      ctx.fillStyle = '#1E293B'; ctx.font = '15px system-ui,-apple-system,sans-serif';
+      ctx.fillText(result[i].name, 90, y+24);
+    }
+
+    var a = document.createElement('a');
+    a.download = 'tontine-groupe'+group+'.png';
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+    showToast('🖼️ Image téléchargée !');
+  } catch(e) {
+    showToast('❌ Export non disponible sur ce navigateur.');
+  }
+}
+
+// ═══════════════════════════════
+// RESET
+// ═══════════════════════════════
+function confirmReset() {
+  if (!confirm('⚠️ Recommencer depuis le début ?\nTous les résultats seront perdus.')) return;
+  state = {
+    phase:'g1-config',
+    g1Names:['','','','','','',''],
+    g2Names:['','','',''],
+    g1Result:null, g2Result:null,
+    g1RevealedCount:0, g2RevealedCount:0,
+    animRunning:false,
+  };
+  render();
+}
+
+// INIT
+render();
+</script>
+</body>
+</html>

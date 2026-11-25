@@ -1,0 +1,27 @@
+POURQUOI CES FICHIERS SONT ICI (candidats à la suppression)
+============================================================
+
+Ces 4 fichiers sont REDONDANTS : tout leur contenu est déjà présent dans
+  01_Manuel\CIAM_TleSM_Manuel_Complet.pdf  (le manuel complet, 350 pages).
+
+Aucune suppression n'a été faite. Tu peux supprimer ce dossier quand tu veux.
+Vérification effectuée le 2026-09-03 (empreintes SHA256 + comparaison des flux d'images).
+
+1) CIAM_TleSM_Manuel_COPIE.zip
+   -> Contient une copie OCTET POUR OCTET du manuel complet.
+      (SHA256 identique à CIAM_TleSM_Manuel_Complet.pdf)
+
+2) CIAM_TleSM_Arithmetique_COPIE.7z
+   -> Archive contenant une copie OCTET POUR OCTET de
+      CIAM_TleSM_Arithmetique_extrait36p.pdf (SHA256 identique).
+
+3) CIAM_TleSM_Arithmetique_extrait36p.pdf
+   -> N'affiche que 36 pages, MAIS embarque quand même les 350 images du
+      manuel complet (d'où sa taille de 53 Mo). Contenu 100 % inclus dans
+      le manuel complet.
+
+4) CIAM_TleSM_Extrait_p1-115.pdf
+   -> N'affiche que 115 pages, MAIS embarque aussi les 350 images du manuel
+      complet. Contenu 100 % inclus dans le manuel complet.
+
+Gain d'espace si suppression : ~187 Mo.
